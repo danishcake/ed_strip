@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rust Debug",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/ed_strip.exe",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "rust: cargo build",
+      "args": [
+        "--input-dir",
+        "./test_in",
+        "--output-dir",
+        "./test_out",
+        "--jobs",
+        "1"
+      ],
+      "internalConsoleOptions": "openOnSessionStart"
+    }
+  ]
+}
