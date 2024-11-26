@@ -529,7 +529,9 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-proto"
-version = "4.0.0"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e4360b434b5980fc397137ef29e1988619fef4159ac86fa7ac5777d459d3924"
 dependencies = [
  "cc",
  "tree-sitter-language",

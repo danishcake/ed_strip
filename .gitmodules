@@ -1,0 +1,19 @@
+[submodule "tree-sitter-dockerfile"]
+path = patches/tree-sitter-dockerfile
+url = https://github.com/danishcake/tree-sitter-dockerfile.git
+
+[submodule "tree-sitter-kotlin"]
+path = patches/tree-sitter-kotlin
+url = https://github.com/danishcake/tree-sitter-kotlin.git
+
+[submodule "tree-sitter-objc"]
+path = patches/tree-sitter-objc
+url = https://github.com/danishcake/tree-sitter-objc.git
+
+[submodule "tree-sitter-toml"]
+path = patches/tree-sitter-toml
+url = https://github.com/danishcake/tree-sitter-toml.git
+
+[submodule "tree-sitter-powershell"]
+path = unpublished/tree-sitter-powershell
+url = https://github.com/danishcake/tree-sitter-powershell.git

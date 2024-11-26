@@ -26,7 +26,7 @@ tree-sitter-kotlin = "4.0.0"                                                    
 tree-sitter-lua = "0.2.0"
 tree-sitter-objc = "4.0.0"                                                                    # forked from 3.0.0
 tree-sitter-php = "0.23.11"
-tree-sitter-proto = "4.0.0"                                                                   # forked from 0.2.0
+tree-sitter-proto = "0.2.0"                                                                   # forked from 0.2.0
 tree-sitter-python = "0.23.4"
 tree-sitter-ruby = "0.23.1"
 tree-sitter-rust = "0.21"
@@ -47,6 +47,5 @@ cc = "*"
 # We resolve this by altering both to 4.0.0
 tree-sitter-objc = { path = "./patches/tree-sitter-objc" }
 tree-sitter-kotlin = { path = "./patches/tree-sitter-kotlin" }
-tree-sitter-proto = { path = "./patches/tree-sitter-proto" }
 tree-sitter-toml = { path = "./patches/tree-sitter-toml" }
 tree-sitter-dockerfile = { path = "./patches/tree-sitter-dockerfile" }
