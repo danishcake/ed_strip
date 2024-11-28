@@ -10,11 +10,32 @@
       "preLaunchTask": "rust: cargo build",
       "args": [
         "--input-dir",
-        "./test_in",
+        "./test/in",
         "--output-dir",
-        "./test_out",
+        "./test/out",
         "--jobs",
-        "1"
+        "0",
+        "--type-hints",
+        "./test/type_hints.json"
+      ],
+      "internalConsoleOptions": "openOnSessionStart"
+    },
+    {
+      "name": "Rust Release",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/release/ed_strip.exe",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "rust: cargo build release",
+      "args": [
+        "--input-dir",
+        "./test/in",
+        "--output-dir",
+        "./test/out",
+        "--jobs",
+        "0",
+        "--type-hints",
+        "./test/type_hints.json"
       ],
       "internalConsoleOptions": "openOnSessionStart"
     }

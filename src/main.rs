@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use clap::Parser;
 use ed_strip::errors::{EdStripResult, StrippingError};
 use ed_strip::strip_process::{find_files, process_file};
+use ed_strip::type_hints::{load_type_hints_file, TypeHints};
 use rayon::prelude::*;
 
 /// Simple program to greet a person
@@ -24,6 +25,10 @@ struct Args {
     /// Number of concurrent stripping jobs. Defaults to number of available cores
     #[arg(short, long, default_value_t = 0)]
     jobs: usize,
+
+    /// An optional JSON file containing type hints
+    #[arg(short = 't', long = "type-hints")]
+    type_hints_path: Option<PathBuf>,
 }
 
 /// Output the stripping result for a single job
@@ -50,12 +55,20 @@ fn main() -> EdStripResult<()> {
     } else {
         env_logger::init();
     }
+
     // Parse the arguments
     let args = Args::parse();
     let input_dir = std::path::absolute(args.input_dir)
         .map_err(|e: std::io::Error| -> StrippingError { e.into() })?;
     let output_dir = std::path::absolute(args.output_dir)
         .map_err(|e: std::io::Error| -> StrippingError { e.into() })?;
+
+    // Load the type hints
+    let type_hints: TypeHints = if let Some(type_hints_path) = args.type_hints_path {
+        load_type_hints_file(&type_hints_path)?
+    } else {
+        Vec::new()
+    };
 
     // Find files
     let files = find_files(&input_dir, &args.glob)?;
@@ -71,7 +84,7 @@ fn main() -> EdStripResult<()> {
         .map(|path| {
             match path {
                 Ok(path) => {
-                    let result = process_file(&input_dir, &output_dir, &path);
+                    let result = process_file(&input_dir, &output_dir, &type_hints, &path);
                     report_result(result, &path)
                 }
                 Err(e) => {

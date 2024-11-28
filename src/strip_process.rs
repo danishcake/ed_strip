@@ -14,36 +14,92 @@
 use std::{fs, path::Path};
 
 use glob::{glob, Paths};
+use log::warn;
 use tree_sitter::Parser as TSParser;
 
 use crate::{
     errors::{StrippingError, StrippingResult},
     languages::{LanguageDefinition, LANGUAGES},
     strip_core::strip_comments,
+    type_hints::{TypeHint, TypeHints},
 };
+
+/// Identifies the language from a given set of type hints
+///
+/// This iterates through the list of available hints and finds those that match a file.
+/// If multiple hints match a file, the last defined takes effect.
+///
+/// # Arguments
+/// * `path` - The full path to the file
+/// * `type_hints` - A type hints structure
+///
+/// # Return
+/// On success, a single matching Option<LanguageDefinition>. If this is None, no language
+/// was hinted
+fn identify_language_from_hints(
+    path: &Path,
+    type_hints: &TypeHints,
+) -> Result<Option<&'static LanguageDefinition>, StrippingError> {
+    // Find type hints that match the path
+    let matching_hints: Vec<&TypeHint> = type_hints
+        .iter()
+        .filter(|&th| th.pattern.matches_path(path))
+        .collect();
+
+    if matching_hints.len() > 0 {
+        warn!("Multiple type hints matched path '{}'", path.display());
+    }
+
+    // Identify the language that corresponds to hint
+    let result = matching_hints
+        .last()
+        .map(|th| {
+            LANGUAGES
+                .iter()
+                .filter_map(|&language| {
+                    if language.name == th.language {
+                        Some(language)
+                    } else {
+                        None
+                    }
+                })
+                .nth(0)
+        })
+        .flatten();
+
+    Ok(result)
+}
 
 /// Identifies the language
 ///
 /// This iterates through the list of available languages and finds those that can handle
 /// a given file extension.
-/// In future this will be extended with type hints to allow this process to be overridden.
+/// If no extension is found, it checks a set of globs
 ///
 /// # Arguments
 /// * `path` - The full path to the file
+/// * `type_hints` - A type hints structure
 ///
 /// # Return
 /// On success, a single matching LanguageDefinition
-fn identify_language(path: &Path) -> Result<&LanguageDefinition, StrippingError> {
+fn identify_language_from_extension(
+    path: &Path,
+) -> Result<&'static LanguageDefinition, StrippingError> {
+    // Extract the file extension. If we can't do this, we can't identify any strippers
+    let path_extension = path.extension();
+
+    // Convert the extension to a &str, which can fail is someone is deliberately passing bad data
+    let path_extension = path_extension.map(|f| f.to_str()).flatten();
+
     // Identify the appropriate language
     let matching_languages: Vec<&&LanguageDefinition> = LANGUAGES
         .iter()
-        .filter(|language| {
-            if let Some(path_extension) = path.extension() {
-                if let Some(path_extension) = path_extension.to_str() {
-                    return language.file_extensions.contains(path_extension);
-                }
-            }
-            false
+        .filter(|&&language| {
+            return matches!(path_extension, Some(path_extension) if language.file_extensions.contains(path_extension)) ||
+                language
+                    .path_globs
+                    .iter()
+                    .any(|path_glob| path_glob.matches_path(path));
         })
         .collect();
 
@@ -56,19 +112,58 @@ fn identify_language(path: &Path) -> Result<&LanguageDefinition, StrippingError>
         }
         1 => matching_languages[0],
         _ => {
+            // This is going to be a fairly common error, so provide a maximally helpful
+            // error message
+            let matching_languages: Vec<&str> = matching_languages
+                .iter()
+                .map(|language| language.name)
+                .collect();
+            let matching_languages = matching_languages.join("/");
+            let suggested_pattern = if let Some(path_extension) = path_extension {
+                format!("**/*.{}", path_extension)
+            } else {
+                path.display().to_string()
+            };
+
             return Err(StrippingError::MultipleStrippersFound {
                 path: path.to_path_buf(),
-            })
+                suggestion: format!(
+                    "{{ \"pattern\": \" {}\", \"language\": \"{}\" }}",
+                    suggested_pattern, matching_languages
+                ),
+            });
         }
     };
 
     Ok(language)
 }
 
+/// Identifies the language
+///
+/// This checks the type hints first, and if the file is not hinted, tries to find a stripper based
+/// on path extensions.
+/// # Arguments
+/// * `path` - The full path to the file
+/// * `type_hints` - A type hints structure
+///
+/// # Return
+/// On success, a single matching LanguageDefinition
+fn identify_language(
+    path: &Path,
+    type_hints: &TypeHints,
+) -> Result<&'static LanguageDefinition, StrippingError> {
+    let language = identify_language_from_hints(path, type_hints)?;
+    if let Some(language) = language {
+        return Ok(language);
+    }
+
+    identify_language_from_extension(path)
+}
+
 /// Loads the file to be stripped
 ///
 /// # Arguments
-/// * path - The path to load. This must refer to a UTF-8 encoded string at present
+/// * `path` - The path to load. This must refer to a UTF-8 encoded string at present
 ///
 /// # Return
 /// On success, the contents of the file.
@@ -83,8 +178,8 @@ fn load_file(path: &Path) -> Result<String, StrippingError> {
 /// Performs the actual stripping for a single file
 ///
 /// # Arguments
-/// * language - The language to strip as
-/// * source - A string containing the source to strip
+/// * `language` - The language to strip as
+/// * `source` - A string containing the source to strip
 ///
 /// # Return
 /// On success, the source code with all comments removed
@@ -107,10 +202,10 @@ fn strip_file(language: &LanguageDefinition, source: String) -> Result<String, S
 /// then /g/h/i/d/e/f will be written.
 ///
 /// # Arguments
-/// * path - The path the file was originally read from
-/// * input_dir - The directory that was searched to find the input file
-/// * output_dir - The directory to write to
-/// * source - The stripped source
+/// * `path` - The path the file was originally read from
+/// * `input_dir` - The directory that was searched to find the input file
+/// * `output_dir` - The directory to write to
+/// * `source` - The stripped source
 fn write_file(
     path: &Path,
     input_dir: &Path,
@@ -121,6 +216,13 @@ fn write_file(
     // and appending the output directory prefix
     let input_relative_path = path.strip_prefix(input_dir)?;
     let output_path = output_dir.join(input_relative_path);
+    let output_path_parent = output_path.parent();
+
+    // Ensure output directory exists
+    if let Some(output_path_parent) = output_path_parent {
+        fs::create_dir_all(output_path_parent)?;
+    }
+
     fs::write(output_path, source)?;
     Ok(())
 }
@@ -128,8 +230,8 @@ fn write_file(
 /// Finds all jobs in the provided input directory using the glob pattern
 ///
 /// # Arguments
-/// * input_dir - The directory to search
-/// * glob_pattern - The glob to search with
+/// * `input_dir` - The directory to search
+/// * `glob_pattern` - The glob to search with
 ///
 /// # Return
 /// On success, an iterable of Path
@@ -148,13 +250,15 @@ pub fn find_files(input_dir: &Path, glob_pattern: &str) -> StrippingResult<Paths
 /// # Arguments
 /// * input_dir - The directory to search
 /// * output_dir - The directory to write results to
+/// * type_hints - A type hints structure
 /// * path - The path to a single file to process
 pub fn process_file(
     input_dir: &Path,
     output_dir: &Path,
+    type_hints: &TypeHints,
     path: &Path,
 ) -> Result<(), StrippingError> {
-    let language = identify_language(path)?;
+    let language = identify_language(path, type_hints)?;
     let source = load_file(path)?;
     let stripped_source = strip_file(language, source)?;
     write_file(path, input_dir, output_dir, stripped_source)
@@ -162,6 +266,12 @@ pub fn process_file(
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use glob::Pattern;
+
+    use crate::type_hints::TypeHint;
+
     use super::*;
 
     /// GIVEN A path to a Python file
@@ -169,7 +279,7 @@ mod tests {
     /// THEN the language is identified
     #[test]
     fn identify_language_finds_python() {
-        let result = identify_language(Path::new("/tmp/test.py"));
+        let result = identify_language(Path::new("/tmp/test.py"), &vec![]);
         assert!(matches!(result, Ok(_)));
     }
 
@@ -178,7 +288,7 @@ mod tests {
     /// THEN an error is returned as the language is ambiguous
     #[test]
     fn identify_language_ambiguity() {
-        let result = identify_language(Path::new("/tmp/test.h"));
+        let result = identify_language(Path::new("/tmp/test.h"), &vec![]);
         assert!(matches!(result, Err(_)));
     }
 
@@ -187,7 +297,100 @@ mod tests {
     /// THEN an error is returned as the language is unknown
     #[test]
     fn identify_language_unknown() {
-        let result = identify_language(Path::new("/tmp/test.bin"));
+        let result = identify_language(Path::new("/tmp/test.bin"), &vec![]);
         assert!(matches!(result, Err(_)));
+    }
+
+    /// GIVEN A path to a known file type
+    /// AND a type hint forcing the language definition
+    /// WHEN identify_language is called
+    /// THEN the alternative language is returned
+    #[test]
+    fn identify_language_can_use_typehints_for_unknowns() {
+        let type_hints: TypeHints = vec![TypeHint {
+            pattern: Pattern::from_str("**/*.bin").unwrap().into(),
+            language: String::from("Javascript"),
+        }];
+
+        let result = identify_language(Path::new("/tmp/test.bin"), &type_hints);
+        assert!(matches!(
+            result,
+            Ok(LanguageDefinition {
+                name: "Javascript",
+                file_extensions: _,
+                comment_node_types: _,
+                path_globs: _,
+                language: _
+            })
+        ));
+    }
+
+    /// GIVEN A path to an unknown file type
+    /// AND a type hint forcing the language definition
+    /// WHEN identify_language is called
+    /// THEN the specified language is returned
+    #[test]
+    fn identify_language_can_use_typehints_to_override_known() {
+        let type_hints: TypeHints = vec![TypeHint {
+            pattern: Pattern::from_str("**/*.c").unwrap().into(),
+            language: String::from("Javascript"),
+        }];
+
+        let result = identify_language(Path::new("/tmp/test.c"), &type_hints);
+        assert!(matches!(
+            result,
+            Ok(LanguageDefinition {
+                name: "Javascript",
+                file_extensions: _,
+                comment_node_types: _,
+                path_globs: _,
+                language: _
+            })
+        ));
+    }
+
+    /// GIVEN A path to an file without an extension
+    /// AND a type hint forcing the language definition
+    /// WHEN identify_language is called
+    /// THEN the specified language is returned
+    #[test]
+    fn identify_language_can_detect_extensionless_files() {
+        let type_hints: TypeHints = vec![];
+
+        let result = identify_language(Path::new("/tmp/Dockerfile"), &type_hints);
+        assert!(matches!(
+            result,
+            Ok(LanguageDefinition {
+                name: "Dockerfile",
+                file_extensions: _,
+                comment_node_types: _,
+                path_globs: _,
+                language: _
+            })
+        ));
+    }
+
+    /// GIVEN A path to an file without an extension
+    /// AND a type hint forcing the language definition
+    /// WHEN identify_language is called
+    /// THEN the specified language is returned
+    #[test]
+    fn identify_language_can_use_typehints_to_overwrite_extensionless_files() {
+        let type_hints: TypeHints = vec![TypeHint {
+            pattern: Pattern::from_str("**/Dockerfile").unwrap().into(),
+            language: String::from("Javascript"),
+        }];
+
+        let result = identify_language(Path::new("/tmp/Dockerfile"), &type_hints);
+        assert!(matches!(
+            result,
+            Ok(LanguageDefinition {
+                name: "Javascript",
+                file_extensions: _,
+                comment_node_types: _,
+                path_globs: _,
+                language: _
+            })
+        ));
     }
 }
