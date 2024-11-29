@@ -7,7 +7,7 @@ use ed_strip::type_hints::{load_type_hints_file, TypeHints};
 use log::debug;
 use rayon::prelude::*;
 
-/// Simple program to greet a person
+/// A fast and multilingual comment stripper
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -31,14 +31,13 @@ struct Args {
     #[arg(short = 't', long = "type-hints")]
     type_hints_path: Option<PathBuf>,
 
-    /// Increase verbosity to debug
-    #[arg(short = 'v', long = "verbose", action = ArgAction::SetTrue)]
-    verbose: bool,
+    /// Increase verbosity to debug if specified once, or trace if specified twice
+    #[arg(short = 'v', long = "verbose", action = ArgAction::Count)]
+    verbose: u8,
 
-    /// Decrease verbosity to error
-    /// Takes precedent over warn
-    #[arg(short = 'q', long = "quiet", action = ArgAction::SetTrue)]
-    quiet: bool,
+    /// Decrease verbosity to warn if specified once, or error if specified twice. Overrides -v
+    #[arg(short = 'q', long = "quiet", action = ArgAction::Count)]
+    quiet: u8,
 }
 
 /// Output the stripping result for a single job
@@ -62,12 +61,12 @@ fn main() -> EdStripResult<()> {
     // Initialise logging.
     // Default to verbosity flag value unless RUST_LOG says differently
     if std::env::var("RUST_LOG").is_err() {
-        let level_filter: log::LevelFilter = if args.quiet {
-            log::LevelFilter::Warn
-        } else if args.verbose {
-            log::LevelFilter::Debug
-        } else {
-            log::LevelFilter::Info
+        let level_filter = match (args.quiet, args.verbose) {
+            (1, _) => log::LevelFilter::Warn,
+            (i, _) if i > 1 => log::LevelFilter::Error,
+            (_, 1) => log::LevelFilter::Debug,
+            (_, i) if i > 1 => log::LevelFilter::Trace,
+            (_, _) => log::LevelFilter::Info,
         };
 
         env_logger::Builder::new().filter(None, level_filter).init();
