@@ -1,3 +1,4 @@
+use log::trace;
 use tree_sitter::{Tree, TreeCursor};
 
 use crate::languages::LanguageDefinition;
@@ -15,6 +16,8 @@ fn comment_replacement(cursor: &TreeCursor<'_>, source_code: &str) -> String {
     let node = cursor.node();
     let node_source = &source_code[node.byte_range()];
     let newline_count = node_source.chars().filter(|c| *c == '\n').count();
+
+    trace!("Stripping comment '{}'", node_source.trim_end());
     "\n".repeat(newline_count)
 }
 
