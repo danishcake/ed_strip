@@ -163,6 +163,7 @@ dependencies = [
  "tree-sitter-css",
  "tree-sitter-dockerfile",
  "tree-sitter-go",
+ "tree-sitter-hcl",
  "tree-sitter-html",
  "tree-sitter-java",
  "tree-sitter-javascript",
@@ -502,6 +503,14 @@ checksum = "dc4ee804a89f5c0e606b0b20579c86afc7cd0174aebd45c33b6b9c6237bcd97d"
 dependencies = [
  "cc",
  "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-hcl"
+version = "4.0.0"
+dependencies = [
+ "cc",
+ "tree-sitter",
 ]
 
 [[package]]

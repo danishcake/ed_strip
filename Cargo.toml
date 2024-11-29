@@ -36,6 +36,7 @@ tree-sitter-typescript = "0.23.2"
 tree-sitter-xml = "0.7.0"
 tree-sitter-yaml = "0.6.1"
 tree-sitter-powershell = { path = "./unpublished/tree-sitter-powershell", version = "4.0.0" }
+tree-sitter-hcl = { path = "./unpublished/tree-sitter-hcl", version = "4.0.0" }
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"
 tree-sitter-cmake = "0.5.0"

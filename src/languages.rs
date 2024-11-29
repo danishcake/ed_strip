@@ -249,8 +249,16 @@ static CMAKE: LanguageDefinition = LanguageDefinition {
     language: Lazy::new(tree_sitter_cmake::language),
 };
 
+static HCL: LanguageDefinition = LanguageDefinition {
+    name: "HCL",
+    comment_node_types: Lazy::new(|| ["comment"].into()),
+    file_extensions: Lazy::new(|| ["tf"].into()),
+    path_globs: Lazy::new(|| vec![]),
+    language: Lazy::new(tree_sitter_hcl::language),
+};
+
 // All supported languages
-pub static LANGUAGES: [&LanguageDefinition; 26] = [
+pub static LANGUAGES: [&LanguageDefinition; 27] = [
     &RUST,
     &TYPESCRIPT,
     &TYPESCRIPT_REACT,
@@ -277,4 +285,5 @@ pub static LANGUAGES: [&LanguageDefinition; 26] = [
     &DOCKERFILE,
     &CSS,
     &CMAKE,
+    &HCL,
 ];
