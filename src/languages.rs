@@ -10,6 +10,7 @@ pub struct LanguageDefinition {
     pub name: &'static str,
 
     /// The file extensions to strip using this stripper
+    /// These should all be lower case
     pub file_extensions: Lazy<HashSet<&'static str>>,
 
     /// The path globs to strip using this stripper
@@ -99,8 +100,13 @@ static BASH: LanguageDefinition = LanguageDefinition {
 static XML: LanguageDefinition = LanguageDefinition {
     name: "XML",
     comment_node_types: Lazy::new(|| ["Comment"].into()),
-    file_extensions: Lazy::new(|| ["xml"].into()),
-    path_globs: Lazy::new(|| vec![]),
+    file_extensions: Lazy::new(|| ["xml", "vcxproj"].into()),
+    path_globs: Lazy::new(|| {
+        vec![
+            Pattern::from_str("**/*.vcxproj.filters").unwrap(),
+            Pattern::from_str("**/*.vcxproj.user").unwrap(),
+        ]
+    }),
     language: Lazy::new(|| tree_sitter_xml::LANGUAGE_XML.into()),
 };
 
@@ -217,12 +223,34 @@ static DOCKERFILE: LanguageDefinition = LanguageDefinition {
     name: "Dockerfile",
     comment_node_types: Lazy::new(|| ["comment"].into()),
     file_extensions: Lazy::new(|| ["dockerfile"].into()),
-    path_globs: Lazy::new(|| vec![Pattern::from_str("**/Dockerfile").unwrap()]),
+    path_globs: Lazy::new(|| {
+        vec![
+            Pattern::from_str("**/DockerFile").unwrap(),
+            Pattern::from_str("**/DockerFile.*").unwrap(),
+        ]
+    }),
     language: Lazy::new(tree_sitter_dockerfile::language),
 };
 
+static CSS: LanguageDefinition = LanguageDefinition {
+    name: "CSS",
+    // There's also a js_comment, but that's not valid in CSS. Odd!
+    comment_node_types: Lazy::new(|| ["comment"].into()),
+    file_extensions: Lazy::new(|| ["css"].into()),
+    path_globs: Lazy::new(|| vec![]),
+    language: Lazy::new(|| tree_sitter_css::LANGUAGE.into()),
+};
+
+static CMAKE: LanguageDefinition = LanguageDefinition {
+    name: "CMake",
+    comment_node_types: Lazy::new(|| ["line_comment", "bracket_comment"].into()),
+    file_extensions: Lazy::new(|| [].into()),
+    path_globs: Lazy::new(|| vec![Pattern::from_str("**/CMakeLists.txt").unwrap()]),
+    language: Lazy::new(tree_sitter_cmake::language),
+};
+
 // All supported languages
-pub static LANGUAGES: [&LanguageDefinition; 24] = [
+pub static LANGUAGES: [&LanguageDefinition; 26] = [
     &RUST,
     &TYPESCRIPT,
     &TYPESCRIPT_REACT,
@@ -247,4 +275,6 @@ pub static LANGUAGES: [&LanguageDefinition; 24] = [
     &C_SHARP,
     &POWERSHELL,
     &DOCKERFILE,
+    &CSS,
+    &CMAKE,
 ];

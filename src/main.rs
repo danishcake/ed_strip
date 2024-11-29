@@ -1,9 +1,10 @@
 use std::path::{Path, PathBuf};
 
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use ed_strip::errors::{EdStripResult, StrippingError};
 use ed_strip::strip_process::{find_files, process_file};
 use ed_strip::type_hints::{load_type_hints_file, TypeHints};
+use log::debug;
 use rayon::prelude::*;
 
 /// Simple program to greet a person
@@ -29,6 +30,15 @@ struct Args {
     /// An optional JSON file containing type hints
     #[arg(short = 't', long = "type-hints")]
     type_hints_path: Option<PathBuf>,
+
+    /// Increase verbosity to debug
+    #[arg(short = 'v', long = "verbose", action = ArgAction::SetTrue)]
+    verbose: bool,
+
+    /// Decrease verbosity to error
+    /// Takes precedent over warn
+    #[arg(short = 'q', long = "quiet", action = ArgAction::SetTrue)]
+    quiet: bool,
 }
 
 /// Output the stripping result for a single job
@@ -47,17 +57,26 @@ fn report_result(result: Result<(), StrippingError>, path: &Path) -> (i32, i32) 
 }
 
 fn main() -> EdStripResult<()> {
-    // Initialise logging. Default to Info unless RUST_LOG says differently
+    let args = Args::parse();
+
+    // Initialise logging.
+    // Default to verbosity flag value unless RUST_LOG says differently
     if std::env::var("RUST_LOG").is_err() {
-        env_logger::Builder::new()
-            .filter(None, log::LevelFilter::Info)
-            .init();
+        let level_filter: log::LevelFilter = if args.quiet {
+            log::LevelFilter::Warn
+        } else if args.verbose {
+            log::LevelFilter::Debug
+        } else {
+            log::LevelFilter::Info
+        };
+
+        env_logger::Builder::new().filter(None, level_filter).init();
     } else {
         env_logger::init();
     }
 
     // Parse the arguments
-    let args = Args::parse();
+
     let input_dir = std::path::absolute(args.input_dir)
         .map_err(|e: std::io::Error| -> StrippingError { e.into() })?;
     let output_dir = std::path::absolute(args.output_dir)
@@ -67,6 +86,7 @@ fn main() -> EdStripResult<()> {
     let type_hints: TypeHints = if let Some(type_hints_path) = args.type_hints_path {
         load_type_hints_file(&type_hints_path)?
     } else {
+        debug!("No type hints specified");
         Vec::new()
     };
 
@@ -74,6 +94,7 @@ fn main() -> EdStripResult<()> {
     let files = find_files(&input_dir, &args.glob)?;
 
     // Initialise threadpool
+    debug!("Initialising threadpool with {} workers", args.jobs);
     rayon::ThreadPoolBuilder::new()
         .num_threads(args.jobs)
         .build_global()?;

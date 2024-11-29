@@ -13,12 +13,12 @@
 - Add basic # stripper
 - Add basic // /\* stripper
 - Add Makefile stripper
+- Add Batch stripper
 
 - Add test corpus from existing stripper
-- Add type hints DONE
-- Add filename guide
 - Add file list input
 - Add NULL stripper
+- Add dumb stripper
 
 - Fix bash multiline comments
 - Fix HTML, which can contain CSS or Javascript

@@ -2,6 +2,7 @@
 use std::{ops::Deref, path::Path, str::FromStr};
 
 use glob::Pattern;
+use log::debug;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -73,6 +74,7 @@ pub enum TypeHintLoadError {
 /// # Arguments
 /// * `path` - The path to the type hints file
 pub fn load_type_hints_file(path: &Path) -> Result<TypeHints, TypeHintLoadError> {
+    debug!("Loading type hints from {}", path.display());
     let contents = std::fs::read(path)?;
     let type_hints: TypeHints = serde_json::from_slice(&contents)?;
     Ok(type_hints)
