@@ -1,18 +1,15 @@
 ## TODO
 
-- Add Terraform
 - Add Thrift
 - Add systemd
 - Add SQL
 - Add SLN
 - Add jsonc
 - Add def
-- Add cmake
 - Add batch
 - Add assembly
 - Add basic # stripper
 - Add basic // /\* stripper
-- Add Makefile stripper
 - Add Batch stripper
 
 - Add test corpus from existing stripper

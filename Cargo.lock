@@ -165,10 +165,12 @@ dependencies = [
  "tree-sitter-go",
  "tree-sitter-hcl",
  "tree-sitter-html",
+ "tree-sitter-ini",
  "tree-sitter-java",
  "tree-sitter-javascript",
  "tree-sitter-kotlin",
  "tree-sitter-lua",
+ "tree-sitter-make",
  "tree-sitter-objc",
  "tree-sitter-php",
  "tree-sitter-powershell",
@@ -524,6 +526,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-ini"
+version = "4.0.0"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "tree-sitter-java"
 version = "0.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -565,6 +575,14 @@ checksum = "5cdb9adf0965fec58e7660cbb3a059dbb12ebeec9459e6dcbae3db004739641e"
 dependencies = [
  "cc",
  "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-make"
+version = "4.0.0"
+dependencies = [
+ "cc",
+ "tree-sitter",
 ]
 
 [[package]]

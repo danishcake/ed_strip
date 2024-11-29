@@ -257,8 +257,24 @@ static HCL: LanguageDefinition = LanguageDefinition {
     language: Lazy::new(tree_sitter_hcl::language),
 };
 
+static MAKE: LanguageDefinition = LanguageDefinition {
+    name: "Make",
+    comment_node_types: Lazy::new(|| ["comment"].into()),
+    file_extensions: Lazy::new(|| ["mk"].into()),
+    path_globs: Lazy::new(|| vec![Pattern::from_str("makefile").unwrap()]),
+    language: Lazy::new(tree_sitter_make::language),
+};
+
+static INI: LanguageDefinition = LanguageDefinition {
+    name: "Ini",
+    comment_node_types: Lazy::new(|| ["comment"].into()),
+    file_extensions: Lazy::new(|| ["ini"].into()),
+    path_globs: Lazy::new(|| vec![]),
+    language: Lazy::new(|| tree_sitter_ini::LANGUAGE.into()),
+};
+
 // All supported languages
-pub static LANGUAGES: [&LanguageDefinition; 27] = [
+pub static LANGUAGES: [&LanguageDefinition; 29] = [
     &RUST,
     &TYPESCRIPT,
     &TYPESCRIPT_REACT,
@@ -286,4 +302,6 @@ pub static LANGUAGES: [&LanguageDefinition; 27] = [
     &CSS,
     &CMAKE,
     &HCL,
+    &MAKE,
+    &INI,
 ];

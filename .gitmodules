@@ -21,3 +21,11 @@ url = https://github.com/danishcake/tree-sitter-powershell.git
 [submodule "tree-sitter-hcl"]
 path = unpublished/tree-sitter-hcl
 url = https://github.com/danishcake/tree-sitter-hcl.git
+
+[submodule "tree-sitter-ini"]
+path = unpublished/tree-sitter-ini
+url = https://github.com/danishcake/tree-sitter-ini.git
+
+[submodule "tree-sitter-make"]
+path = unpublished/tree-sitter-make
+url = https://github.com/danishcake/tree-sitter-make.git
